@@ -66,14 +66,17 @@ popen4("ls -l /dev/disk/by-uuid/* | awk '{print $11, $9}'") do |pid, stdin, stdo
 end
 
 # Grab any missing mount information from /proc/mounts
-File.open('/proc/mounts').each do |line|
-  if line =~ /^(\S+) (\S+) (\S+) (\S+) \S+ \S+$/
-    filesystem = $1
-    next if fs.has_key?(filesystem)
-    fs[filesystem] = Mash.new
-    fs[filesystem][:mount] = $2
-    fs[filesystem][:fs_type] = $3
-    fs[filesystem][:mount_options] = $4.split(",")
+File.open('/proc/mounts') do |mounts|
+  mount_info = mounts.read_nonblock(10240)
+  mount_info.each_line  do |line|
+    if line =~ /^(\S+) (\S+) (\S+) (\S+) \S+ \S+$/
+      filesystem = $1
+      next if fs.has_key?(filesystem)
+      fs[filesystem] = Mash.new
+      fs[filesystem][:mount] = $2
+      fs[filesystem][:fs_type] = $3
+      fs[filesystem][:mount_options] = $4.split(",")
+    end
   end
 end
 
